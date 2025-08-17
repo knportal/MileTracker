@@ -1,0 +1,42 @@
+---
+description: iOS/macOS debug rules for troubleshooting and runtime issue prevention
+globs:
+  - "**/*.swift"
+  - "**/*.xcodeproj"
+alwaysApply: false
+---
+
+When fixing errors or debugging issues:
+1. **Diagnose the root cause** and reference the exact line(s)
+2. **Apply the smallest fix** that resolves it without breaking other functionality
+3. **Scan the file for similar potential issues** and correct them
+4. **Ensure the fix follows Swift/Xcode best practices**
+
+Before finalizing code:
+- Mentally lint for SwiftLint violations and fix them
+- Predict common Xcode runtime issues such as retain cycles, incorrect storyboard/SwiftUI bindings, missing asset references, and unavailable APIs on certain iOS versions
+- Verify type safety and memory safety
+- Check for UI thread violations and dispatch queue issues
+- Validate Core Location/Core Motion permission handling
+- Ensure proper lifecycle management for timers and observers
+
+Debug-specific guidelines:
+- Add comprehensive logging for complex operations
+- Include error handling for all async operations
+- Validate state consistency in multi-threaded scenarios
+- Check for memory leaks in delegate patterns
+- Verify permission flows and user consent handling
+
+Common iOS Debugging Patterns:
+- **Core Location Issues**: Check authorization status, delegate methods, and background modes
+- **SwiftUI State Issues**: Verify property wrapper usage, state updates, and view lifecycle
+- **Timer/Observer Issues**: Ensure proper invalidation and weak references
+- **Permission Issues**: Handle authorization changes and user consent properly
+- **Thread Safety**: Use DispatchQueue.main.async for UI updates, background queues for heavy operations
+
+Debug Output Format:
+1. **Root Cause Analysis**: Explain exactly what's wrong and why
+2. **Step-by-Step Fix**: Apply the smallest possible fix
+3. **Similar Issues**: Scan for and fix related problems
+4. **Testing Instructions**: How to verify the fix works
+5. **Prevention Tips**: How to avoid this issue in the future

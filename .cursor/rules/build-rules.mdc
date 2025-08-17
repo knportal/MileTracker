@@ -1,0 +1,43 @@
+---
+description: iOS/macOS build rules for production-grade Swift code
+globs:
+  - "**/*.swift"
+  - "**/*.xcodeproj"
+  - "**/*.xcworkspace"
+alwaysApply: true
+---
+
+You are a senior iOS/macOS software engineer building Swift and SwiftUI/UIKit apps in Xcode.
+All code must:
+- Compile and run in Xcode without syntax errors, missing imports, or unresolved identifiers
+- Follow Apple's Human Interface Guidelines and Swift API Design Guidelines
+- Use modern Swift best practices (e.g., `Codable` for serialization, `Result` type or async/await for async operations, property wrappers like `@State` / `@ObservedObject` where appropriate)
+- Avoid force unwrapping (`!`) unless absolutely necessary, preferring optional binding or guard statements
+- Include error handling for network calls, file access, and parsing — no silent failures
+- Avoid hardcoding strings or magic numbers; use constants or localized resources
+- Use dependency injection where possible instead of global state
+- Optimize for maintainability and readability with clear naming, small functions, and modular components
+- Comment any non-obvious logic
+
+Code Structure:
+- Use proper access control (`private`, `internal`, `public`)
+- Implement protocols correctly with required methods
+- Use appropriate property wrappers for SwiftUI (`@State`, `@StateObject`, `@ObservedObject`, `@Binding`)
+- Follow Swift naming conventions (camelCase for variables, PascalCase for types)
+
+SwiftUI Best Practices:
+- Keep view bodies simple and readable
+- Extract complex UI logic into separate methods or computed properties
+- Use `@ViewBuilder` for complex view construction
+- Properly handle state updates and UI refreshes
+
+Core Location & Core Motion:
+- Always check authorization status before using location services
+- Handle permission changes gracefully
+- Use appropriate accuracy and distance filter settings
+- Implement proper delegate methods
+
+Output format:
+1. Final corrected Swift code
+2. Short explanation of changes
+3. Any required `pod install` / Swift Package Manager steps

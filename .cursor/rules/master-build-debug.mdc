@@ -1,0 +1,46 @@
+# 🎯 **MileTracker Development Rules**
+
+This project now uses **separate, focused rule files** for better organization and control:
+
+## 📚 **Available Rules:**
+
+### **1. `build-rules.mdc`** ✅ **Always Applied**
+- **Purpose**: Code quality, compilation standards, best practices
+- **When**: Applied to every Swift file automatically
+- **Focus**: Clean, production-ready Swift code
+
+### **2. `debug-rules.mdc`** 🔧 **Applied When Needed**
+- **Purpose**: Error diagnosis, runtime issue prevention, troubleshooting
+- **When**: Applied manually when debugging or fixing issues
+- **Focus**: Deep problem-solving and prevention
+
+## 🚀 **How to Use:**
+
+### **Normal Development:**
+- Apply only `build-rules.mdc`
+- Get clean, production-ready code
+
+### **When Debugging:**
+- Apply both `build-rules.mdc` + `debug-rules.mdc`
+- Get comprehensive error diagnosis and fixes
+
+### **For Complex Issues:**
+- Apply `debug-rules.mdc` specifically
+- Get deep troubleshooting expertise
+
+## 💡 **Benefits of This Approach:**
+
+1. **Cleaner Separation**: Build vs. Debug concerns are separate
+2. **Better Control**: You decide when to get debugging assistance
+3. **Focused AI**: Each rule set has a specific purpose
+4. **Easier Maintenance**: Update rules independently
+
+## 🔍 **Current MileTracker Status:**
+
+- **Build Rules**: ✅ Always active for code quality
+- **Debug Rules**: 🔧 Available when needed for troubleshooting
+- **Automatic Trip Detection**: 🚗 Fixed and ready for testing
+
+---
+
+*Note: This master rule file is now a reference guide. The actual functionality is in the separate build and debug rule files.*
