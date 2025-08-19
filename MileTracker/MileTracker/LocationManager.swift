@@ -230,8 +230,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             report += "Date: \(dateFormatter.string(from: testCase.startTime))\n"
             report += "Locations: \(testCase.locations.count)\n"
             
-            // Calculate actual distance from saved locations
-            let calculatedDistance = calculateDistance(locations: testCase.locations)
+            // Calculate actual distance from saved location data
+            let calculatedDistance = calculateDistanceFromLocationData(testCase.locations)
             report += "Calculated Distance: \(String(format: "%.2f", calculatedDistance)) miles\n"
             
             if let tripData = testCase.tripData {
@@ -1355,5 +1355,20 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     func calculateTotalDistance() -> Double {
         return calculateDistance(locations: locations)
+    }
+    
+    // Helper method to calculate distance from saved test case location data
+    private func calculateDistanceFromLocationData(_ locationData: [TestCase.LocationData]) -> Double {
+        guard locationData.count > 1 else { return 0 }
+        
+        var distance: Double = 0
+        for i in 1..<locationData.count {
+            let prevLocation = CLLocation(latitude: locationData[i-1].latitude, longitude: locationData[i-1].longitude)
+            let currLocation = CLLocation(latitude: locationData[i].latitude, longitude: locationData[i].longitude)
+            distance += currLocation.distance(from: prevLocation)
+        }
+        
+        // Convert meters to miles
+        return distance / 1609.34
     }
 }
