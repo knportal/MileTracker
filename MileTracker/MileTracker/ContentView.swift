@@ -280,11 +280,17 @@ struct ContentView: View {
                     .buttonStyle(.bordered)
                     .foregroundColor(.purple)
                     
+                    Button("GPS Health") {
+                        locationManager.checkGPSHealth()
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.blue)
+                    
                     Button("Refresh Status") {
                         locationManager.refreshAuthorizationStatus()
                     }
                     .buttonStyle(.bordered)
-                    .foregroundColor(.blue)
+                    .foregroundColor(.green)
                 }
                 
                 #if DEBUG

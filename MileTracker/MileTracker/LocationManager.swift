@@ -903,7 +903,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
                 self.addLog("✅ Mock tracking state set to active")
                 
                 // Start simulation after state is set
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                     self.addLog("🔄 Starting mock location simulation...")
                     self.simulateLocationUpdates()
                 }
@@ -918,6 +918,16 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             self.locationError = nil
         }
         
+        // Enhanced GPS diagnostics
+        addLog("🔍 === GPS DIAGNOSTICS ===")
+        addLog("🔍 Location services enabled: \(CLLocationManager.locationServicesEnabled())")
+        addLog("🔍 Authorization status: \(currentStatus.rawValue)")
+        addLog("🔍 Manager desired accuracy: \(manager.desiredAccuracy)")
+        addLog("🔍 Manager distance filter: \(manager.distanceFilter)")
+        addLog("🔍 Manager activity type: \(manager.activityType.rawValue)")
+        addLog("🔍 Manager allows background updates: \(manager.allowsBackgroundLocationUpdates)")
+        addLog("🔍 === END DIAGNOSTICS ===")
+        
         // Check if we have permission before starting
         let currentStatus = authorizationStatus
         addLog("Current authorization status: \(currentStatus.rawValue)")
@@ -925,8 +935,10 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         if currentStatus.rawValue == 3 || currentStatus.rawValue == 4 { // .authorizedWhenInUse || .authorizedAlways
             addLog("Permission granted, starting location updates")
             manager.startUpdatingLocation()
+            addLog("✅ CLLocationManager.startUpdatingLocation() called")
             DispatchQueue.main.async {
                 self.isTracking = true
+                self.addLog("✅ Tracking state set to true")
             }
         } else {
             let errorMessage = "Cannot start location updates - no permission. Status: \(currentStatus.rawValue)"
@@ -1215,6 +1227,20 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         addLog("🏥 === END HEALTH CHECK ===")
     }
     
+    func checkGPSHealth() {
+        addLog("📍 === GPS HEALTH CHECK ===")
+        addLog("📍 Location services enabled: \(CLLocationManager.locationServicesEnabled())")
+        addLog("📍 Authorization status: \(authorizationStatus.rawValue)")
+        addLog("📍 Manager is updating location: \(manager.location != nil)")
+        addLog("📍 Current location count: \(locations.count)")
+        addLog("📍 Last location time: \(lastMovementTime?.description ?? "Never")")
+        addLog("📍 Manager desired accuracy: \(manager.desiredAccuracy)")
+        addLog("📍 Manager distance filter: \(manager.distanceFilter)")
+        addLog("📍 Manager activity type: \(manager.activityType.rawValue)")
+        addLog("📍 Manager allows background updates: \(manager.allowsBackgroundLocationUpdates)")
+        addLog("📍 === END GPS HEALTH CHECK ===")
+    }
+    
     func refreshAuthorizationStatus() {
         let logMessage = "Refreshing authorization status"
         print("LocationManager: \(logMessage)")
@@ -1313,6 +1339,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     // MARK: - CLLocationManagerDelegate
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations newLocations: [CLLocation]) {
+        addLog("📍 === GPS LOCATION UPDATE ===")
+        addLog("📍 Received \(newLocations.count) new GPS locations")
+        
         DispatchQueue.main.async {
             // Add new locations
             self.locations.append(contentsOf: newLocations)
@@ -1325,9 +1354,13 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             // Update last movement time for auto-stop detection
             if let lastLocation = newLocations.last {
                 self.lastMovementTime = lastLocation.timestamp
+                self.addLog("📍 Last location: \(String(format: "%.6f", lastLocation.coordinate.latitude)), \(String(format: "%.6f", lastLocation.coordinate.longitude))")
+                self.addLog("📍 Accuracy: \(String(format: "%.1fm", lastLocation.horizontalAccuracy))")
+                self.addLog("📍 Timestamp: \(self.formatTime(lastLocation.timestamp))")
             }
             
-            self.addLog("📍 Location update: \(newLocations.count) new points, total: \(self.locations.count)")
+            self.addLog("📍 Total locations in array: \(self.locations.count)")
+            self.addLog("📍 === END GPS UPDATE ===")
         }
     }
     
