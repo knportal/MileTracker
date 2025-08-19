@@ -612,7 +612,7 @@ struct TestCaseSummaryView: View {
                 Text(locationManager.getTestCaseSummary())
                     .font(.body)
                     .multilineTextAlignment(.leading)
-                    .padding()
+        .padding()
                 
                 Spacer()
             }

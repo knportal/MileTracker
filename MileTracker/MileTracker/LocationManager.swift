@@ -97,10 +97,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             addLog("🧪 Notes: \(notes)")
         }
         addLog("🧪 Start Time: \(formatTime(Date()))")
+        addLog("🧪 Current locations: \(locations.count)")
+        addLog("🧪 Current distance: \(String(format: "%.2f", calculateTotalDistance())) miles")
         addLog("🧪 ================================")
         
-        // Reset trip state for clean test
-        resetTripData()
+        // Don't reset trip data - let it continue naturally
+        // resetTripData() // Commented out to preserve trip state during test cases
     }
     
     func endTestCase() {
@@ -122,12 +124,19 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     func saveCurrentTestCase() {
+        // Capture the current state more accurately
+        let actualStartTime = Date().addingTimeInterval(-TimeInterval(debugLogs.count * 2))
+        let actualEndTime = Date()
+        
+        // Calculate actual distance from current locations
+        let actualDistance = calculateDistance(locations: locations)
+        
         let testCase = TestCase(
             id: UUID(),
             name: currentTestCase,
             notes: testCaseNotes,
-            startTime: Date().addingTimeInterval(-TimeInterval(debugLogs.count * 2)), // Approximate start time
-            endTime: Date(),
+            startTime: actualStartTime,
+            endTime: actualEndTime,
             logs: debugLogs,
             locations: locations.map { location in
                 TestCase.LocationData(
@@ -141,8 +150,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
                 isActive: isTripActive,
                 startTime: tripStartTime,
                 endTime: tripEndTime,
-                distance: currentTripDistance,
-                duration: tripStartTime != nil ? Date().timeIntervalSince(tripStartTime!) : nil
+                distance: actualDistance, // Use calculated distance instead of currentTripDistance
+                duration: tripStartTime != nil ? actualEndTime.timeIntervalSince(tripStartTime!) : nil
             ),
             deviceInfo: TestCase.DeviceInfo(
                 deviceModel: UIDevice.current.model,
@@ -154,6 +163,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         savedTestCases.append(testCase)
         addLog("💾 Test case '\(currentTestCase)' saved successfully")
         addLog("💾 Total test cases saved: \(savedTestCases.count)")
+        addLog("💾 Captured \(locations.count) locations with \(String(format: "%.2f", actualDistance)) miles")
     }
     
     func exportTestCase(_ testCase: TestCase) -> String {
@@ -206,15 +216,24 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     func exportAllTestCases() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .short
+        
         var report = "=== MileTracker All Test Cases Report ===\n"
-        report += "Generated: \(DateFormatter().string(from: Date()))\n"
+        report += "Generated: \(dateFormatter.string(from: Date()))\n"
         report += "Total Test Cases: \(savedTestCases.count)\n\n"
         
         for (index, testCase) in savedTestCases.enumerated() {
             report += "--- Test Case \(index + 1) ---\n"
             report += "Name: \(testCase.name)\n"
-            report += "Date: \(DateFormatter().string(from: testCase.startTime))\n"
+            report += "Date: \(dateFormatter.string(from: testCase.startTime))\n"
             report += "Locations: \(testCase.locations.count)\n"
+            
+            // Calculate actual distance from saved locations
+            let calculatedDistance = calculateDistance(locations: testCase.locations)
+            report += "Calculated Distance: \(String(format: "%.2f", calculatedDistance)) miles\n"
+            
             if let tripData = testCase.tripData {
                 report += "Trip Distance: \(String(format: "%.2f", tripData.distance)) miles\n"
             }
@@ -1332,5 +1351,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         // Convert meters to miles
         return distance / 1609.34
+    }
+    
+    func calculateTotalDistance() -> Double {
+        return calculateDistance(locations: locations)
     }
 }

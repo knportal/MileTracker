@@ -231,3 +231,4 @@ For questions, issues, or contributions:
 **Built with ❤️ using Swift and SwiftUI**
 
 *MileTracker - Professional mileage tracking for iOS*
+
