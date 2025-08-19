@@ -918,6 +918,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             self.locationError = nil
         }
         
+        // Check if we have permission before starting
+        let currentStatus = authorizationStatus
+        
         // Enhanced GPS diagnostics
         addLog("🔍 === GPS DIAGNOSTICS ===")
         addLog("🔍 Location services enabled: \(CLLocationManager.locationServicesEnabled())")
@@ -928,8 +931,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         addLog("🔍 Manager allows background updates: \(manager.allowsBackgroundLocationUpdates)")
         addLog("🔍 === END DIAGNOSTICS ===")
         
-        // Check if we have permission before starting
-        let currentStatus = authorizationStatus
         addLog("Current authorization status: \(currentStatus.rawValue)")
 
         if currentStatus.rawValue == 3 || currentStatus.rawValue == 4 { // .authorizedWhenInUse || .authorizedAlways

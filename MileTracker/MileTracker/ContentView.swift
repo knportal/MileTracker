@@ -243,58 +243,25 @@ struct ContentView: View {
                     .foregroundColor(.orange)
                 }
                 
+                // Essential Debug Controls
                 HStack(spacing: 20) {
-                    Button("Force Stop") {
-                        locationManager.forceStopLocationUpdates()
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.red)
-                    
-                    Button("Start Location") {
-                        locationManager.startLocationUpdates()
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.green)
-                    
-                    Button("Reset State") {
-                        locationManager.resetTrackingState()
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.purple)
-                    
-                    Button("Restart Motion") {
-                        locationManager.restartMotionDetection()
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.orange)
-                    
-                    Button("Debug State") {
-                        locationManager.logCurrentState()
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.gray)
-                    
-                    Button("Health Check") {
-                        locationManager.checkSystemHealth()
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.purple)
-                    
                     Button("GPS Health") {
                         locationManager.checkGPSHealth()
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.blue)
                     
-                    Button("Refresh Status") {
-                        locationManager.refreshAuthorizationStatus()
+                    Button("Force Stop") {
+                        locationManager.forceStopLocationUpdates()
                     }
                     .buttonStyle(.bordered)
-                    .foregroundColor(.green)
+                    .foregroundColor(.red)
                 }
                 
+                // Mock Mode (Hidden for now - focus on real GPS testing)
                 #if DEBUG
-                // Mock Mode Testing Controls
+                // Uncomment to enable mock mode testing
+                /*
                 VStack(spacing: 12) {
                     Text("Mock Mode Testing")
                         .font(.headline)
@@ -314,6 +281,7 @@ struct ContentView: View {
                         .foregroundColor(.orange)
                     }
                 }
+                */
                 #endif
                 
                 // Test Case Management Section
