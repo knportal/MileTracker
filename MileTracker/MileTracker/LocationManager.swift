@@ -840,6 +840,13 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         manager.pausesLocationUpdatesAutomatically = true
         manager.activityType = .automotiveNavigation
         manager.distanceFilter = 10 // Update every 10 meters
+        
+        // Log the actual values being set for debugging
+        addLog("🔧 GPS Manager Configuration:")
+        addLog("🔧 Desired accuracy: \(manager.desiredAccuracy)")
+        addLog("🔧 Distance filter: \(manager.distanceFilter)")
+        addLog("🔧 Activity type: \(manager.activityType.rawValue)")
+        
         // Note: allowsBackgroundLocationUpdates will be set after authorization
         
         // Don't check authorization status here - wait for delegate callback
@@ -1248,9 +1255,37 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             DispatchQueue.main.async {
                 self.addLog("📍 Manager is updating location: \(isUpdatingLocation)")
                 self.addLog("📍 Manager allows background updates: \(allowsBackgroundUpdates)")
+                
+                // Check for invalid settings and offer to fix them
+                if self.manager.desiredAccuracy < 0 {
+                    self.addLog("⚠️ WARNING: Invalid desired accuracy detected!")
+                    self.addLog("💡 Tap 'Fix GPS Settings' to correct this")
+                }
+                
                 self.addLog("📍 === END GPS HEALTH CHECK ===")
             }
         }
+    }
+    
+    func fixGPSSettings() {
+        addLog("🔧 === FIXING GPS SETTINGS ===")
+        
+        // Reset to proper values
+        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.distanceFilter = 10.0
+        manager.activityType = .automotiveNavigation
+        
+        addLog("🔧 Set desired accuracy to: \(manager.desiredAccuracy)")
+        addLog("🔧 Set distance filter to: \(manager.distanceFilter)")
+        addLog("🔧 Set activity type to: \(manager.activityType.rawValue)")
+        
+        // Request background updates if we have Always permission
+        if authorizationStatus.rawValue == 4 {
+            manager.allowsBackgroundLocationUpdates = true
+            addLog("🔧 Enabled background location updates")
+        }
+        
+        addLog("🔧 === GPS SETTINGS FIXED ===")
     }
     
     func refreshAuthorizationStatus() {

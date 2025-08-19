@@ -251,6 +251,12 @@ struct ContentView: View {
                     .buttonStyle(.bordered)
                     .foregroundColor(.blue)
                     
+                    Button("Fix GPS Settings") {
+                        locationManager.fixGPSSettings()
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.orange)
+                    
                     Button("Force Stop") {
                         locationManager.forceStopLocationUpdates()
                     }
