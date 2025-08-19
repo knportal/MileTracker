@@ -83,6 +83,37 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     // MARK: - Test Case Management Methods
     
+    // MARK: - Persistent Storage Keys
+    private let testCasesStorageKey = "MileTracker_SavedTestCases"
+    
+    // MARK: - Persistent Storage Methods
+    private func saveTestCasesToStorage() {
+        do {
+            let data = try JSONEncoder().encode(savedTestCases)
+            UserDefaults.standard.set(data, forKey: testCasesStorageKey)
+            addLog("💾 Test cases saved to persistent storage: \(savedTestCases.count) cases")
+        } catch {
+            addLog("❌ Failed to save test cases to storage: \(error.localizedDescription)")
+        }
+    }
+    
+    private func loadTestCasesFromStorage() {
+        guard let data = UserDefaults.standard.data(forKey: testCasesStorageKey) else {
+            addLog("ℹ️ No saved test cases found in storage")
+            return
+        }
+        
+        do {
+            let loadedTestCases = try JSONDecoder().decode([TestCase].self, from: data)
+            savedTestCases = loadedTestCases
+            addLog("📱 Loaded \(loadedTestCases.count) test cases from persistent storage")
+        } catch {
+            addLog("❌ Failed to load test cases from storage: \(error.localizedDescription)")
+            // If loading fails, start with empty array
+            savedTestCases = []
+        }
+    }
+    
     func startTestCase(name: String, notes: String = "") {
         currentTestCase = name
         testCaseNotes = notes
@@ -164,6 +195,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         addLog("💾 Test case '\(currentTestCase)' saved successfully")
         addLog("💾 Total test cases saved: \(savedTestCases.count)")
         addLog("💾 Captured \(locations.count) locations with \(String(format: "%.2f", actualDistance)) miles")
+        
+        // Automatically save to persistent storage
+        saveTestCasesToStorage()
     }
     
     func exportTestCase(_ testCase: TestCase) -> String {
@@ -245,7 +279,13 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     func clearAllTestCases() {
         savedTestCases.removeAll()
-        addLog("🗑️ All test cases cleared")
+        UserDefaults.standard.removeObject(forKey: testCasesStorageKey)
+        addLog("🗑️ All test cases cleared from memory and persistent storage")
+    }
+    
+    func saveAllTestCasesToStorage() {
+        saveTestCasesToStorage()
+        addLog("💾 Manually saved all test cases to persistent storage")
     }
     
     func getTestCaseSummary() -> String {
@@ -794,6 +834,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         // Setup Core Motion for trip detection
         setupMotionDetection()
+        
+        // Load previously saved test cases from persistent storage
+        loadTestCasesFromStorage()
     }
     
     func requestLocationPermission() {

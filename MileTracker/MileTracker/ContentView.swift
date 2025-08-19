@@ -392,6 +392,12 @@ struct ContentView: View {
                             .buttonStyle(.bordered)
                             .foregroundColor(.green)
                             
+                            Button("Save All") {
+                                locationManager.saveAllTestCasesToStorage()
+                            }
+                            .buttonStyle(.bordered)
+                            .foregroundColor(.blue)
+                            
                             Button("Export All") {
                                 exportAllTestCases()
                             }
