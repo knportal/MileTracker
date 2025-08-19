@@ -1106,32 +1106,34 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         // Ensure motion detection is active
         setupMotionDetection()
         
-        // Get the current status from the system to avoid initialization confusion
-        let systemStatus = manager.authorizationStatus
-        addLog("System authorization status: \(systemStatus.rawValue)")
-        
-        // Check current authorization status and log appropriately
-        DispatchQueue.main.async {
-            self.authorizationStatus = systemStatus
+        // Get the current status from the system on background thread to avoid UI blocking
+        DispatchQueue.global(qos: .userInitiated).async {
+            let systemStatus = self.manager.authorizationStatus
+            self.addLog("System authorization status: \(systemStatus.rawValue)")
             
-            if systemStatus.rawValue == 4 { // .authorizedAlways
-                self.addLog("✅ Always authorization available - background tracking enabled")
-                self.addLog("✅ Motion detection active - automatic trip detection enabled")
-            } else if systemStatus.rawValue == 3 { // .authorizedWhenInUse
-                self.addLog("✅ When In Use authorization available - tracking can be started")
-                self.addLog("✅ Motion detection active - automatic trip detection enabled")
-            } else if systemStatus.rawValue == 2 { // .denied
-                self.addLog("❌ Location access denied - user needs to enable in Settings")
-                self.locationError = "Location access denied"
-            } else if systemStatus.rawValue == 1 { // .restricted
-                self.addLog("❌ Location access restricted - cannot use location services")
-                self.locationError = "Location access restricted"
-            } else if systemStatus.rawValue == 0 { // .notDetermined
-                self.addLog("⏳ Location permission not determined - checking current status...")
-                // Don't auto-request permission - let user decide when to start tracking
-                self.addLog("ℹ️ User can start tracking manually when ready")
-            } else {
-                self.addLog("❓ Unknown authorization status: \(systemStatus.rawValue)")
+            // Check current authorization status and log appropriately
+            DispatchQueue.main.async {
+                self.authorizationStatus = systemStatus
+                
+                if systemStatus.rawValue == 4 { // .authorizedAlways
+                    self.addLog("✅ Always authorization available - background tracking enabled")
+                    self.addLog("✅ Motion detection active - automatic trip detection enabled")
+                } else if systemStatus.rawValue == 3 { // .authorizedWhenInUse
+                    self.addLog("✅ When In Use authorization available - tracking can be started")
+                    self.addLog("✅ Motion detection active - automatic trip detection enabled")
+                } else if systemStatus.rawValue == 2 { // .denied
+                    self.addLog("❌ Location access denied - user needs to enable in Settings")
+                    self.locationError = "Location access denied"
+                } else if systemStatus.rawValue == 1 { // .restricted
+                    self.addLog("❌ Location access restricted - cannot use location services")
+                    self.locationError = "Location access restricted"
+                } else if systemStatus.rawValue == 0 { // .notDetermined
+                    self.addLog("⏳ Location permission not determined - checking current status...")
+                    // Don't auto-request permission - let user decide when to start tracking
+                    self.addLog("ℹ️ User can start tracking manually when ready")
+                } else {
+                    self.addLog("❓ Unknown authorization status: \(systemStatus.rawValue)")
+                }
             }
         }
     }
@@ -1232,14 +1234,23 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         addLog("📍 === GPS HEALTH CHECK ===")
         addLog("📍 Location services enabled: \(CLLocationManager.locationServicesEnabled())")
         addLog("📍 Authorization status: \(authorizationStatus.rawValue)")
-        addLog("📍 Manager is updating location: \(manager.location != nil)")
         addLog("📍 Current location count: \(locations.count)")
         addLog("📍 Last location time: \(lastMovementTime?.description ?? "Never")")
         addLog("📍 Manager desired accuracy: \(manager.desiredAccuracy)")
         addLog("📍 Manager distance filter: \(manager.distanceFilter)")
         addLog("📍 Manager activity type: \(manager.activityType.rawValue)")
-        addLog("📍 Manager allows background updates: \(manager.allowsBackgroundLocationUpdates)")
-        addLog("📍 === END GPS HEALTH CHECK ===")
+        
+        // Check potentially blocking properties on background thread
+        DispatchQueue.global(qos: .userInitiated).async {
+            let isUpdatingLocation = self.manager.location != nil
+            let allowsBackgroundUpdates = self.manager.allowsBackgroundLocationUpdates
+            
+            DispatchQueue.main.async {
+                self.addLog("📍 Manager is updating location: \(isUpdatingLocation)")
+                self.addLog("📍 Manager allows background updates: \(allowsBackgroundUpdates)")
+                self.addLog("📍 === END GPS HEALTH CHECK ===")
+            }
+        }
     }
     
     func refreshAuthorizationStatus() {
@@ -1247,29 +1258,31 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         print("LocationManager: \(logMessage)")
         addLog(logMessage)
         
-        // Get the current status from the system
-        let currentStatus = manager.authorizationStatus
-        addLog("System authorization status: \(currentStatus.rawValue)")
-        
-        DispatchQueue.main.async {
-            self.authorizationStatus = currentStatus
+        // Get the current status from the system on background thread to avoid UI blocking
+        DispatchQueue.global(qos: .userInitiated).async {
+            let currentStatus = self.manager.authorizationStatus
+            self.addLog("System authorization status: \(currentStatus.rawValue)")
             
-            if currentStatus.rawValue == 4 { // .authorizedAlways
-                self.addLog("✅ Always authorization confirmed - background tracking available")
-                self.addLog("✅ Motion detection active - automatic trip detection ready")
-            } else if currentStatus.rawValue == 3 { // .authorizedWhenInUse
-                self.addLog("✅ When In Use authorization confirmed - location tracking available")
-                self.addLog("✅ Motion detection active - automatic trip detection ready")
-            } else if currentStatus.rawValue == 2 { // .denied
-                self.addLog("❌ Location access denied - user needs to enable in Settings")
-                self.locationError = "Location access denied - enable in Settings"
-            } else if currentStatus.rawValue == 1 { // .restricted
-                self.addLog("❌ Location access restricted - cannot use location services")
-                self.locationError = "Location access restricted"
-            } else if currentStatus.rawValue == 0 { // .notDetermined
-                self.addLog("⏳ Location permission not determined - user needs to grant access")
-            } else {
-                self.addLog("❓ Unknown authorization status: \(currentStatus.rawValue)")
+            DispatchQueue.main.async {
+                self.authorizationStatus = currentStatus
+                
+                if currentStatus.rawValue == 4 { // .authorizedAlways
+                    self.addLog("✅ Always authorization confirmed - background tracking available")
+                    self.addLog("✅ Motion detection active - automatic trip detection ready")
+                } else if currentStatus.rawValue == 3 { // .authorizedWhenInUse
+                    self.addLog("✅ When In Use authorization confirmed - location tracking available")
+                    self.addLog("✅ Motion detection active - automatic trip detection ready")
+                } else if currentStatus.rawValue == 2 { // .denied
+                    self.addLog("❌ Location access denied - user needs to enable in Settings")
+                    self.locationError = "Location access denied - enable in Settings"
+                } else if currentStatus.rawValue == 1 { // .restricted
+                    self.addLog("❌ Location access restricted - cannot use location services")
+                    self.locationError = "Location access restricted"
+                } else if currentStatus.rawValue == 0 { // .notDetermined
+                    self.addLog("⏳ Location permission not determined - user needs to grant access")
+                } else {
+                    self.addLog("❓ Unknown authorization status: \(currentStatus.rawValue)")
+                }
             }
         }
     }
