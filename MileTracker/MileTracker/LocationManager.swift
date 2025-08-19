@@ -136,8 +136,11 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         // Reset mock mode state for new test case
         if isMockMode {
             addLog("🔄 Resetting mock mode for new test case")
+            addLog("📍 Mock location index before reset: \(mockLocationIndex)")
             mockLocationIndex = 0
             addLog("📍 Mock location index reset to 0")
+            addLog("📍 Current mock trip: \(mockTripIndex + 1) of \(mockTrips.count)")
+            addLog("📍 Mock trip has \(mockTrips[mockTripIndex].count) locations available")
         }
         #endif
         
@@ -385,14 +388,13 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             return 
         }
         
-        // Reset location index for new trip
-        // mockLocationIndex = 0 // This line was removed from the new_code, so it's removed here.
-        
         // Stop any existing timer
         stopMockLocationUpdates()
         
         addLog("📍 Starting mock location simulation for Trip \(mockTripIndex + 1)")
         addLog("📍 Trip has \(mockTrips[mockTripIndex].count) locations to simulate")
+        addLog("📍 Current mockLocationIndex: \(mockLocationIndex)")
+        addLog("📍 Will add locations from index \(mockLocationIndex) to \(mockTrips[mockTripIndex].count - 1)")
         
         // CRITICAL FIX: Simulate automotive activity in Mock Mode
         // This allows testing the speed detection logic without real motion
@@ -437,9 +439,11 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
                 }
                 
                 self.mockLocationIndex += 1
+                self.addLog("📍 Incremented mockLocationIndex to: \(self.mockLocationIndex)")
             } else {
                 timer.invalidate()
                 self.addLog("✅ Mock trip \(self.mockTripIndex + 1) completed - \(self.mockTrips[self.mockTripIndex].count) locations added")
+                self.addLog("📍 Final mockLocationIndex: \(self.mockLocationIndex)")
             }
         }
         
