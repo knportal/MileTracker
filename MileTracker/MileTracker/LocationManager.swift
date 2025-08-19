@@ -132,6 +132,15 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         addLog("🧪 Current distance: \(String(format: "%.2f", calculateTotalDistance())) miles")
         addLog("🧪 ================================")
         
+        #if DEBUG
+        // Reset mock mode state for new test case
+        if isMockMode {
+            addLog("🔄 Resetting mock mode for new test case")
+            mockLocationIndex = 0
+            addLog("📍 Mock location index reset to 0")
+        }
+        #endif
+        
         // Don't reset trip data - let it continue naturally
         // resetTripData() // Commented out to preserve trip state during test cases
     }
@@ -878,16 +887,11 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         print("LocationManager: \(logMessage)")
         addLog(logMessage)
 
-        // Clear previous locations when starting a new session
-        DispatchQueue.main.async {
-            self.locations.removeAll()
-            self.locationError = nil
-        }
-        
         #if DEBUG
         if isMockMode {
             addLog("🚀 Starting mock location tracking - Trip \(mockTripIndex + 1)")
             addLog("🔍 Mock mode details: isMockMode=\(isMockMode), isTracking=\(isTracking)")
+            addLog("📍 Current locations before mock start: \(locations.count)")
             
             // Set tracking state first
             DispatchQueue.main.async {
@@ -903,6 +907,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             return
         }
         #endif
+        
+        // Only clear locations for real GPS tracking, not mock mode
+        DispatchQueue.main.async {
+            self.locations.removeAll()
+            self.locationError = nil
+        }
         
         // Check if we have permission before starting
         let currentStatus = authorizationStatus
