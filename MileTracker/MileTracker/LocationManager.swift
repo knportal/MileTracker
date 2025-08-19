@@ -990,15 +990,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     // MARK: - Distance Calculation
     
-    func calculateTotalDistance() -> Double {
-        guard locations.count > 1 else { return 0 }
-        var distance: Double = 0
-        for i in 1..<locations.count {
-            distance += locations[i].distance(from: locations[i-1])
-        }
-        return distance / 1609.34 // meters → miles
-    }
-    
     func resetTrackingState() {
         addLog("🔄 Resetting tracking state")
         
