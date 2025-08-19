@@ -257,6 +257,12 @@ struct ContentView: View {
                     .buttonStyle(.bordered)
                     .foregroundColor(.orange)
                     
+                    Button("Clear Logs") {
+                        locationManager.clearDuplicateLogs()
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.purple)
+                    
                     Button("Force Stop") {
                         locationManager.forceStopLocationUpdates()
                     }

@@ -815,9 +815,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         let timestamp = DateFormatter().string(from: Date())
         let logEntry = "[\(timestamp)] \(message)"
         
-        // Prevent duplicate consecutive log entries
-        if let lastLog = debugLogs.last, lastLog == logEntry {
-            return // Skip duplicate
+        // Prevent duplicate consecutive log entries with better deduplication
+        if let lastLog = debugLogs.last {
+            let lastMessage = lastLog.components(separatedBy: "] ").dropFirst().joined(separator: "] ")
+            if lastMessage == message {
+                return // Skip duplicate message content
+            }
         }
         
         DispatchQueue.main.async {
@@ -836,7 +839,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     override init() {
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyBest
+        manager.desiredAccuracy = 0.0  // kCLLocationAccuracyBest equivalent
         manager.pausesLocationUpdatesAutomatically = true
         manager.activityType = .automotiveNavigation
         manager.distanceFilter = 10 // Update every 10 meters
@@ -1270,8 +1273,11 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     func fixGPSSettings() {
         addLog("🔧 === FIXING GPS SETTINGS ===")
         
-        // Reset to proper values
-        manager.desiredAccuracy = kCLLocationAccuracyBest
+        // Stop current location updates first
+        manager.stopUpdatingLocation()
+        
+        // Reset to proper values using explicit constants
+        manager.desiredAccuracy = 0.0  // kCLLocationAccuracyBest equivalent
         manager.distanceFilter = 10.0
         manager.activityType = .automotiveNavigation
         
@@ -1285,7 +1291,33 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             addLog("🔧 Enabled background location updates")
         }
         
+        // Restart location updates to apply new settings
+        if authorizationStatus.rawValue >= 3 {
+            manager.startUpdatingLocation()
+            addLog("🔧 Restarted location updates with new settings")
+        }
+        
         addLog("🔧 === GPS SETTINGS FIXED ===")
+    }
+    
+    func clearDuplicateLogs() {
+        addLog("🧹 === CLEARING DUPLICATE LOGS ===")
+        
+        // Remove duplicate log entries
+        var uniqueLogs: [String] = []
+        var seenMessages: Set<String> = []
+        
+        for log in debugLogs {
+            let message = log.components(separatedBy: "] ").dropFirst().joined(separator: "] ")
+            if !seenMessages.contains(message) {
+                uniqueLogs.append(log)
+                seenMessages.insert(message)
+            }
+        }
+        
+        debugLogs = uniqueLogs
+        addLog("🧹 Removed \(debugLogs.count - uniqueLogs.count) duplicate log entries")
+        addLog("🧹 === LOGS CLEANED ===")
     }
     
     func refreshAuthorizationStatus() {
