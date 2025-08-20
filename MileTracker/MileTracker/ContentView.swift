@@ -263,6 +263,12 @@ struct ContentView: View {
                     .buttonStyle(.bordered)
                     .foregroundColor(.purple)
                     
+                    Button("Clear All Logs") {
+                        locationManager.clearDebugLogs()
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.red)
+                    
                     Button("Force Stop") {
                         locationManager.forceStopLocationUpdates()
                     }

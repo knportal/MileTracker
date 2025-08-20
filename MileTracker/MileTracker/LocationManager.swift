@@ -317,7 +317,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     func checkBackgroundLocationAvailability() -> Bool {
-        return manager.allowsBackgroundLocationUpdates
+        // Access on background thread to avoid UI blocking
+        var result = false
+        DispatchQueue.global(qos: .userInitiated).sync {
+            result = manager.allowsBackgroundLocationUpdates
+        }
+        return result
     }
 
     #if DEBUG
@@ -477,36 +482,16 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         addLog("🔄 Setting up Core Motion activity detection")
         isMotionDetectionActive = true
         
-        // CRITICAL FIX: Add throttling to prevent system overload
-        var lastMotionLogTime: Date = Date.distantPast
-        let motionThrottleInterval: TimeInterval = 1.0 // Only log motion changes every 1 second
-        
         motionManager.startActivityUpdates(to: .main) { [weak self] activity in
             guard let self = self, let activity = activity else { return }
             
-            let now = Date()
-            let timeSinceLastLog = now.timeIntervalSince(lastMotionLogTime)
-            
-            // Throttle motion logging to prevent system overload
-            if timeSinceLastLog >= motionThrottleInterval {
-                let activityType = self.getActivityDescription(activity)
-                self.addLog("🔄 Motion detected: \(activityType) (automotive: \(activity.automotive))")
-                lastMotionLogTime = now
-                
-                DispatchQueue.main.async {
-                    if activity.automotive {
-                        self.addLog("🚗 Automotive activity detected")
-                        self.handleAutomotiveActivity()
-                    } else if activity.walking || activity.running || activity.cycling {
-                        self.addLog("🚶 Non-automotive activity: \(activityType)")
-                        self.handleNonAutomotiveActivity()
-                    } else {
-                        // Don't log every "Stationary" or "Unknown" activity to reduce noise
-                        if activityType != "Stationary" && activityType != "Unknown" {
-                            self.addLog("ℹ️ Other activity: \(activityType)")
-                        }
-                    }
+            DispatchQueue.main.async {
+                if activity.automotive {
+                    self.handleAutomotiveActivity()
+                } else if activity.walking || activity.running || activity.cycling {
+                    self.handleNonAutomotiveActivity()
                 }
+                // Don't log every motion change to reduce noise
             }
         }
         
@@ -525,11 +510,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private var lastAutomotiveActivityTime: Date? = nil
     
     private func handleAutomotiveActivity() {
-        addLog("🚗 handleAutomotiveActivity() called")
-        
         // CRITICAL FIX: Don't start speed detection if trip is already active
         if isTripActive {
-            addLog("🚗 Automotive activity detected but trip already active - continuing existing trip")
             return
         }
         
@@ -538,8 +520,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         let now = Date()
         if let lastAutomotiveTime = lastAutomotiveActivityTime {
             let timeSinceLastActivity = now.timeIntervalSince(lastAutomotiveTime)
-            if timeSinceLastActivity < 2.0 { // Minimum 2 seconds between activities
-                addLog("🚗 Throttling automotive activity (last: \(String(format: "%.1f", timeSinceLastActivity))s ago)")
+            if timeSinceLastActivity < 5.0 { // Minimum 5 seconds between activities
                 return
             }
         }
@@ -554,8 +535,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             if !isTracking {
                 addLog("📍 Starting location tracking for speed detection")
                 startLocationUpdates()
-            } else {
-                addLog("📍 Location tracking already active")
             }
             
             // Start monitoring speed for trip start
@@ -812,12 +791,15 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     private func addLog(_ message: String) {
-        let timestamp = DateFormatter().string(from: Date())
-        let logEntry = "[\(timestamp)] \(message)"
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "MMM d, yyyy at h:mm:ss.SSS a" // Include milliseconds for uniqueness
+        let timestamp = dateFormatter.string(from: Date())
+        let uniqueId = UUID().uuidString.prefix(8) // Add unique identifier
+        let logEntry = "[\(timestamp)] [\(uniqueId)] \(message)"
         
         // Prevent duplicate consecutive log entries with better deduplication
         if let lastLog = debugLogs.last {
-            let lastMessage = lastLog.components(separatedBy: "] ").dropFirst().joined(separator: "] ")
+            let lastMessage = lastLog.components(separatedBy: "] ").dropFirst(2).joined(separator: "] ") // Skip timestamp and ID
             if lastMessage == message {
                 return // Skip duplicate message content
             }
@@ -839,16 +821,30 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     override init() {
         super.init()
         manager.delegate = self
-        manager.desiredAccuracy = 0.0  // kCLLocationAccuracyBest equivalent
-        manager.pausesLocationUpdatesAutomatically = true
-        manager.activityType = .automotiveNavigation
-        manager.distanceFilter = 10 // Update every 10 meters
         
-        // Log the actual values being set for debugging
-        addLog("🔧 GPS Manager Configuration:")
-        addLog("🔧 Desired accuracy: \(manager.desiredAccuracy)")
-        addLog("🔧 Distance filter: \(manager.distanceFilter)")
-        addLog("🔧 Activity type: \(manager.activityType.rawValue)")
+        // Configure manager properties on background thread to avoid UI blocking
+        DispatchQueue.global(qos: .userInitiated).async {
+            self.manager.desiredAccuracy = 0.0  // kCLLocationAccuracyBest equivalent
+            self.manager.pausesLocationUpdatesAutomatically = true
+            self.manager.activityType = .automotiveNavigation
+            self.manager.distanceFilter = 10 // Update every 10 meters
+            
+            // Log the actual values being set for debugging
+            DispatchQueue.main.async {
+                self.addLog("🔧 GPS Manager Configuration:")
+            }
+            
+            // Access on background thread to avoid UI blocking
+            let desiredAccuracy = self.manager.desiredAccuracy
+            let distanceFilter = self.manager.distanceFilter
+            let activityType = self.manager.activityType.rawValue
+            
+            DispatchQueue.main.async {
+                self.addLog("🔧 Desired accuracy: \(desiredAccuracy)")
+                self.addLog("🔧 Distance filter: \(distanceFilter)")
+                self.addLog("🔧 Activity type: \(activityType)")
+            }
+        }
         
         // Note: allowsBackgroundLocationUpdates will be set after authorization
         
@@ -863,36 +859,39 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     func requestLocationPermission() {
-        // Check if location services are enabled
-        if CLLocationManager.locationServicesEnabled() {
-            // Check current status to determine what to request
-            let currentStatus = authorizationStatus
-            print("LocationManager: Current status when requesting permission: \(currentStatus.rawValue)")
-            
-            // Use raw values to avoid enum comparison issues
-            if currentStatus.rawValue == 0 { // .notDetermined
-                print("LocationManager: Requesting Always authorization")
-                manager.requestAlwaysAuthorization()
-            } else if currentStatus.rawValue == 3 { // .authorizedWhenInUse
-                print("LocationManager: User has When In Use, requesting Always")
-                // User already has "When In Use" permission, request "Always"
-                manager.requestAlwaysAuthorization()
-            } else if currentStatus.rawValue == 4 { // .authorizedAlways
-                print("LocationManager: Already have Always authorization")
-                // Already have full permission, update status and start tracking
-                DispatchQueue.main.async {
-                    self.authorizationStatus = currentStatus
-                    self.startLocationUpdates()
+        // Check if location services are enabled on background thread
+        DispatchQueue.global(qos: .userInitiated).async {
+            let servicesEnabled = CLLocationManager.locationServicesEnabled()
+            DispatchQueue.main.async {
+                if servicesEnabled {
+                    // Check current status to determine what to request
+                    let currentStatus = self.authorizationStatus
+                    print("LocationManager: Current status when requesting permission: \(currentStatus.rawValue)")
+                    
+                    // Use raw values to avoid enum comparison issues
+                    if currentStatus.rawValue == 0 { // .notDetermined
+                        print("LocationManager: Requesting Always authorization")
+                        self.manager.requestAlwaysAuthorization()
+                    } else if currentStatus.rawValue == 3 { // .authorizedWhenInUse
+                        print("LocationManager: User has When In Use, requesting Always")
+                        // User already has "When In Use" permission, request "Always"
+                        self.manager.requestAlwaysAuthorization()
+                    } else if currentStatus.rawValue == 4 { // .authorizedAlways
+                        print("LocationManager: Already have Always authorization")
+                        // Already have full permission, update status and start tracking
+                        self.authorizationStatus = currentStatus
+                        self.startLocationUpdates()
+                    } else if currentStatus.rawValue == 2 || currentStatus.rawValue == 1 { // .denied || .restricted
+                        print("LocationManager: Authorization denied or restricted")
+                        self.locationError = "Location access denied. Please enable in Settings."
+                    } else {
+                        print("LocationManager: Unknown authorization status: \(currentStatus.rawValue)")
+                    }
+                } else {
+                    print("LocationManager: Location services disabled")
+                    self.locationError = "Location services are disabled"
                 }
-            } else if currentStatus.rawValue == 2 || currentStatus.rawValue == 1 { // .denied || .restricted
-                print("LocationManager: Authorization denied or restricted")
-                locationError = "Location access denied. Please enable in Settings."
-            } else {
-                print("LocationManager: Unknown authorization status: \(currentStatus.rawValue)")
             }
-        } else {
-            print("LocationManager: Location services disabled")
-            locationError = "Location services are disabled"
         }
     }
     
@@ -933,12 +932,33 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         // Enhanced GPS diagnostics
         addLog("🔍 === GPS DIAGNOSTICS ===")
-        addLog("🔍 Location services enabled: \(CLLocationManager.locationServicesEnabled())")
         addLog("🔍 Authorization status: \(currentStatus.rawValue)")
-        addLog("🔍 Manager desired accuracy: \(manager.desiredAccuracy)")
-        addLog("🔍 Manager distance filter: \(manager.distanceFilter)")
-        addLog("🔍 Manager activity type: \(manager.activityType.rawValue)")
-        addLog("🔍 Manager allows background updates: \(manager.allowsBackgroundLocationUpdates)")
+        
+        // Check location services enabled on background thread
+        getSystemState { systemState in
+            DispatchQueue.main.async {
+                self.addLog("🔍 Location services enabled: \(systemState.locationServicesEnabled)")
+            }
+        }
+        // Access on background thread to avoid UI blocking
+        DispatchQueue.global(qos: .userInitiated).async {
+            let desiredAccuracy = self.manager.desiredAccuracy
+            let distanceFilter = self.manager.distanceFilter
+            let activityType = self.manager.activityType.rawValue
+            
+            DispatchQueue.main.async {
+                self.addLog("🔍 Manager desired accuracy: \(desiredAccuracy)")
+                self.addLog("🔍 Manager distance filter: \(distanceFilter)")
+                self.addLog("🔍 Manager activity type: \(activityType)")
+            }
+        }
+        // Access on background thread to avoid UI blocking
+        DispatchQueue.global(qos: .userInitiated).async {
+            let allowsBackground = self.manager.allowsBackgroundLocationUpdates
+            DispatchQueue.main.async {
+                self.addLog("🔍 Manager allows background updates: \(allowsBackground)")
+            }
+        }
         addLog("🔍 === END DIAGNOSTICS ===")
         
         addLog("Current authorization status: \(currentStatus.rawValue)")
@@ -1030,7 +1050,17 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         report = report + "=== Current Status ===\n"
         report = report + "Authorization Status: \(authorizationStatus.rawValue)\n"
-        report = report + "Location Services Enabled: \(CLLocationManager.locationServicesEnabled())\n"
+        
+        // Get location services status on background thread
+        var locationServicesEnabled = false
+        let semaphore = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .userInitiated).async {
+            locationServicesEnabled = CLLocationManager.locationServicesEnabled()
+            semaphore.signal()
+        }
+        semaphore.wait()
+        
+        report = report + "Location Services Enabled: \(locationServicesEnabled)\n"
         report = report + "Total Locations Tracked: \(locations.count)\n"
         report = report + "Total Distance: \(String(format: "%.2f", self.calculateTotalDistance())) miles\n\n"
         
@@ -1242,25 +1272,22 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     
     func checkGPSHealth() {
         addLog("📍 === GPS HEALTH CHECK ===")
-        addLog("📍 Location services enabled: \(CLLocationManager.locationServicesEnabled())")
         addLog("📍 Authorization status: \(authorizationStatus.rawValue)")
         addLog("📍 Current location count: \(locations.count)")
         addLog("📍 Last location time: \(lastMovementTime?.description ?? "Never")")
-        addLog("📍 Manager desired accuracy: \(manager.desiredAccuracy)")
-        addLog("📍 Manager distance filter: \(manager.distanceFilter)")
-        addLog("📍 Manager activity type: \(manager.activityType.rawValue)")
         
-        // Check potentially blocking properties on background thread
-        DispatchQueue.global(qos: .userInitiated).async {
-            let isUpdatingLocation = self.manager.location != nil
-            let allowsBackgroundUpdates = self.manager.allowsBackgroundLocationUpdates
-            
+        // Use a helper method to get all system state on background thread
+        getSystemState { systemState in
             DispatchQueue.main.async {
-                self.addLog("📍 Manager is updating location: \(isUpdatingLocation)")
-                self.addLog("📍 Manager allows background updates: \(allowsBackgroundUpdates)")
+                self.addLog("📍 Location services enabled: \(systemState.locationServicesEnabled)")
+                self.addLog("📍 Manager desired accuracy: \(systemState.desiredAccuracy)")
+                self.addLog("📍 Manager distance filter: \(systemState.distanceFilter)")
+                self.addLog("📍 Manager activity type: \(systemState.activityType)")
+                self.addLog("📍 Manager is updating location: \(systemState.isUpdatingLocation)")
+                self.addLog("📍 Manager allows background updates: \(systemState.allowsBackgroundUpdates)")
                 
                 // Check for invalid settings and offer to fix them
-                if self.manager.desiredAccuracy < 0 {
+                if systemState.desiredAccuracy < 0 {
                     self.addLog("⚠️ WARNING: Invalid desired accuracy detected!")
                     self.addLog("💡 Tap 'Fix GPS Settings' to correct this")
                 }
@@ -1270,34 +1297,87 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         }
     }
     
+    // Helper method to get manager state on background thread
+    private func getManagerState(completion: @escaping ((desiredAccuracy: Double, distanceFilter: Double, activityType: Int, isUpdatingLocation: Bool, allowsBackgroundUpdates: Bool)) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let managerState = (
+                desiredAccuracy: self.manager.desiredAccuracy,
+                distanceFilter: self.manager.distanceFilter,
+                activityType: self.manager.activityType.rawValue,
+                isUpdatingLocation: self.manager.location != nil,
+                allowsBackgroundUpdates: self.manager.allowsBackgroundLocationUpdates
+            )
+            completion(managerState)
+        }
+    }
+    
+    // Helper method to get all system state on background thread
+    private func getSystemState(completion: @escaping ((locationServicesEnabled: Bool, desiredAccuracy: Double, distanceFilter: Double, activityType: Int, isUpdatingLocation: Bool, allowsBackgroundUpdates: Bool)) -> Void) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let systemState = (
+                locationServicesEnabled: CLLocationManager.locationServicesEnabled(),
+                desiredAccuracy: self.manager.desiredAccuracy,
+                distanceFilter: self.manager.distanceFilter,
+                activityType: self.manager.activityType.rawValue,
+                isUpdatingLocation: self.manager.location != nil,
+                allowsBackgroundUpdates: self.manager.allowsBackgroundLocationUpdates
+            )
+            completion(systemState)
+        }
+    }
+    
     func fixGPSSettings() {
         addLog("🔧 === FIXING GPS SETTINGS ===")
         
-        // Stop current location updates first
-        manager.stopUpdatingLocation()
-        
-        // Reset to proper values using explicit constants
-        manager.desiredAccuracy = 0.0  // kCLLocationAccuracyBest equivalent
-        manager.distanceFilter = 10.0
-        manager.activityType = .automotiveNavigation
-        
-        addLog("🔧 Set desired accuracy to: \(manager.desiredAccuracy)")
-        addLog("🔧 Set distance filter to: \(manager.distanceFilter)")
-        addLog("🔧 Set activity type to: \(manager.activityType.rawValue)")
-        
-        // Request background updates if we have Always permission
-        if authorizationStatus.rawValue == 4 {
-            manager.allowsBackgroundLocationUpdates = true
-            addLog("🔧 Enabled background location updates")
+        // Apply all manager settings on background thread to avoid UI blocking
+        DispatchQueue.global(qos: .userInitiated).async {
+            // Stop current location updates first
+            self.manager.stopUpdatingLocation()
+            
+            // Reset to proper values using explicit constants
+            self.manager.desiredAccuracy = 0.0  // kCLLocationAccuracyBest equivalent
+            self.manager.distanceFilter = 10.0
+            self.manager.activityType = .automotiveNavigation
+            
+            DispatchQueue.main.async {
+                self.addLog("🔧 Applied GPS settings directly:")
+                self.addLog("🔧 - Desired accuracy: 0.0 (best)")
+                self.addLog("🔧 - Distance filter: 10.0 meters")
+                self.addLog("🔧 - Activity type: automotiveNavigation")
+            }
+            
+            // Use helper method to verify settings on background thread
+            self.getManagerState { managerState in
+                DispatchQueue.main.async {
+                    self.addLog("🔧 Verified GPS settings after application:")
+                    self.addLog("🔧 - Desired accuracy: \(managerState.desiredAccuracy)")
+                    self.addLog("🔧 - Distance filter: \(managerState.distanceFilter)")
+                    self.addLog("🔧 - Activity type: \(managerState.activityType)")
+                }
+            }
+            
+            // Request background updates if we have Always permission
+            if self.authorizationStatus.rawValue == 4 {
+                self.manager.allowsBackgroundLocationUpdates = true
+                DispatchQueue.main.async {
+                    self.addLog("🔧 Enabled background location updates")
+                }
+            }
+            
+            // Restart location updates to apply new settings
+            if self.authorizationStatus.rawValue >= 3 {
+                // Force a complete restart to ensure new settings take effect
+                self.manager.stopUpdatingLocation()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.manager.startUpdatingLocation()
+                    self.addLog("🔧 Restarted location updates with new settings")
+                }
+            }
+            
+            DispatchQueue.main.async {
+                self.addLog("🔧 === GPS SETTINGS FIXED ===")
+            }
         }
-        
-        // Restart location updates to apply new settings
-        if authorizationStatus.rawValue >= 3 {
-            manager.startUpdatingLocation()
-            addLog("🔧 Restarted location updates with new settings")
-        }
-        
-        addLog("🔧 === GPS SETTINGS FIXED ===")
     }
     
     func clearDuplicateLogs() {
@@ -1308,7 +1388,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         var seenMessages: Set<String> = []
         
         for log in debugLogs {
-            let message = log.components(separatedBy: "] ").dropFirst().joined(separator: "] ")
+            let message = log.components(separatedBy: "] ").dropFirst(2).joined(separator: "] ") // Skip timestamp and ID
             if !seenMessages.contains(message) {
                 uniqueLogs.append(log)
                 seenMessages.insert(message)
@@ -1319,6 +1399,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         addLog("🧹 Removed \(debugLogs.count - uniqueLogs.count) duplicate log entries")
         addLog("🧹 === LOGS CLEANED ===")
     }
+    
+
     
     func refreshAuthorizationStatus() {
         let logMessage = "Refreshing authorization status"
