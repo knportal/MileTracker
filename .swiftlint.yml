@@ -41,3 +41,4 @@ function_body_length:
 cyclomatic_complexity:
   warning: 10
   error: 20
+# Test comment
