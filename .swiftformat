@@ -1,0 +1,9 @@
+--indent 4
+--maxwidth 100
+--wraparguments before-first
+--wrapcollections before-first
+--stripunusedargs closure-only
+--commas inline
+--semicolons never
+--disable redundantSelf
+--disable unusedArguments
