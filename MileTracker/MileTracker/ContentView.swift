@@ -8,70 +8,73 @@
 import SwiftUI
 
 #if DEBUG
-struct MockModeView: View {
-    @ObservedObject var locationManager: LocationManager
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            Text("🧪 Mock Mode Controls")
-                .font(.headline)
-                .foregroundColor(.purple)
-            
-            HStack(spacing: 20) {
-                Button(locationManager.isMockMode ? "Disable Mock" : "Enable Mock") {
-                    locationManager.toggleMockMode()
+    struct MockModeView: View {
+        @ObservedObject var locationManager: LocationManager
+
+        var body: some View {
+            VStack(spacing: 12) {
+                Text("🧪 Mock Mode Controls")
+                    .font(.headline)
+                    .foregroundColor(.purple)
+
+                HStack(spacing: 20) {
+                    Button(locationManager.isMockMode ? "Disable Mock" : "Enable Mock") {
+                        locationManager.toggleMockMode()
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(locationManager.isMockMode ? .red : .purple)
+
+                    Button("Next Trip") {
+                        locationManager.nextMockTrip()
+                    }
+                    .disabled(!locationManager.isMockMode)
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.blue)
                 }
-                .buttonStyle(.bordered)
-                .foregroundColor(locationManager.isMockMode ? .red : .purple)
-                
-                Button("Next Trip") {
-                    locationManager.nextMockTrip()
-                }
-                .disabled(!locationManager.isMockMode)
-                .buttonStyle(.bordered)
-                .foregroundColor(.blue)
-            }
-            
-            if locationManager.isMockMode {
-                VStack(spacing: 4) {
-                    Text("Trip \(locationManager.mockTripIndex + 1) of \(locationManager.getMockTripCount())")
+
+                if locationManager.isMockMode {
+                    VStack(spacing: 4) {
+                        Text(
+                            "Trip \(locationManager.mockTripIndex + 1) of \(locationManager.getMockTripCount())"
+                        )
                         .font(.caption)
                         .foregroundColor(.purple)
-                    Text(locationManager.getCurrentMockTripInfo())
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                    
-                    // Manual mock location button for testing
-                    Button("Add Mock Location") {
-                        locationManager.addMockLocation()
+                        Text(locationManager.getCurrentMockTripInfo())
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+
+                        // Manual mock location button for testing
+                        Button("Add Mock Location") {
+                            locationManager.addMockLocation()
+                        }
+                        .disabled(!locationManager.isTracking)
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.green)
+                        .font(.caption)
                     }
-                    .disabled(!locationManager.isTracking)
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.green)
-                    .font(.caption)
                 }
             }
+            .padding()
+            .background(Color(.systemPurple).opacity(0.1))
+            .cornerRadius(12)
         }
-        .padding()
-        .background(Color(.systemPurple).opacity(0.1))
-        .cornerRadius(12)
     }
-}
 #endif
 
 struct ContentView: View {
     @StateObject var locationManager = LocationManager()
-    
+
     // Test Case Management State
     @State private var showingStartTestCaseAlert = false
     @State private var showingAddNoteAlert = false
     @State private var showingTestCaseSummary = false
     @State private var showingSavedTestCases = false
     @State private var showingClearTestCasesAlert = false
+    @State private var showingDiagnosticIssues = false
     @State private var testCaseName = ""
     @State private var testCaseNotes = ""
-    
+
     private var permissionLevelText: String {
         switch locationManager.authorizationStatus.rawValue {
         case 0: return "Not Determined"
@@ -82,7 +85,7 @@ struct ContentView: View {
         default: return "Unknown"
         }
     }
-    
+
     private func formatTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
@@ -97,18 +100,20 @@ struct ContentView: View {
                     Text("MileTracker")
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                    
-                    Text("Total Distance: \(String(format: "%.2f", locationManager.calculateTotalDistance())) miles")
-                        .font(.title2)
-                        .foregroundColor(.primary)
+
+                    Text(
+                        "Total Distance: \(String(format: "%.2f", locationManager.calculateTotalDistance())) miles"
+                    )
+                    .font(.title2)
+                    .foregroundColor(.primary)
                 }
-                
+
                 // Trip Status Section
                 VStack(spacing: 12) {
                     Text("Trip Status")
                         .font(.headline)
                         .foregroundColor(.blue)
-                    
+
                     if locationManager.isTripActive {
                         VStack(spacing: 8) {
                             HStack {
@@ -118,16 +123,18 @@ struct ContentView: View {
                                     .foregroundColor(.green)
                                     .fontWeight(.semibold)
                             }
-                            
+
                             if let startTime = locationManager.tripStartTime {
                                 Text("Started: \(formatTime(startTime))")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
-                            
-                            Text("Current Distance: \(String(format: "%.2f", locationManager.currentTripDistance)) miles")
-                                .font(.subheadline)
-                                .foregroundColor(.primary)
+
+                            Text(
+                                "Current Distance: \(String(format: "%.2f", locationManager.currentTripDistance)) miles"
+                            )
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
                         }
                         .padding()
                         .background(Color(.systemGreen).opacity(0.1))
@@ -144,13 +151,13 @@ struct ContentView: View {
                         .cornerRadius(12)
                     }
                 }
-                
+
                 // Trip Control Buttons
                 VStack(spacing: 12) {
                     Text("Trip Controls")
                         .font(.headline)
                         .foregroundColor(.orange)
-                    
+
                     HStack(spacing: 20) {
                         Button(locationManager.isTripActive ? "Stop Trip" : "Start Trip") {
                             if locationManager.isTripActive {
@@ -161,7 +168,7 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                         .foregroundColor(locationManager.isTripActive ? .red : .green)
-                        
+
                         Button("Reset Trip") {
                             locationManager.resetTripData()
                         }
@@ -170,7 +177,7 @@ struct ContentView: View {
                         .foregroundColor(.orange)
                     }
                 }
-                
+
                 // Location Status
                 if let error = locationManager.locationError {
                     Text(error)
@@ -179,7 +186,7 @@ struct ContentView: View {
                         .background(Color(.systemRed).opacity(0.1))
                         .cornerRadius(8)
                 }
-                
+
                 // Authorization Status Display
                 switch locationManager.authorizationStatus.rawValue {
                 case 0: // .notDetermined
@@ -187,7 +194,7 @@ struct ContentView: View {
                         locationManager.requestLocationPermission()
                     }
                     .buttonStyle(.borderedProminent)
-                    
+
                 case 3: // .authorizedWhenInUse
                     VStack(spacing: 8) {
                         Text("Location: When In Use")
@@ -197,7 +204,7 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                     }
-                    
+
                 case 4: // .authorizedAlways
                     Text("Location: Always Allowed ✅")
                         .foregroundColor(.green)
@@ -205,7 +212,7 @@ struct ContentView: View {
                         .padding(.vertical, 4)
                         .background(Color(.systemGreen).opacity(0.1))
                         .cornerRadius(8)
-                    
+
                 case 1, 2: // .restricted, .denied
                     VStack(spacing: 8) {
                         Text("Location Access Denied")
@@ -215,34 +222,36 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                     }
-                    
+
                 default:
                     Text("Unknown Authorization Status")
                         .foregroundColor(.secondary)
                 }
-                
+
                 // Tracking Controls
                 HStack(spacing: 20) {
                     Button("Start Tracking") {
                         locationManager.startLocationUpdates()
                     }
-                    .disabled(locationManager.authorizationStatus.rawValue < 3 || locationManager.isTracking)
+                    .disabled(locationManager.authorizationStatus.rawValue < 3 || locationManager
+                        .isTracking
+                    )
                     .buttonStyle(.borderedProminent)
-                    
+
                     Button("Stop Tracking") {
                         locationManager.stopLocationUpdates()
                     }
                     .disabled(!locationManager.isTracking)
                     .buttonStyle(.bordered)
                     .foregroundColor(.red)
-                    
+
                     Button("Reset Distance") {
                         locationManager.resetDistance()
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.orange)
                 }
-                
+
                 // Essential Debug Controls
                 HStack(spacing: 20) {
                     Button("GPS Health") {
@@ -250,64 +259,64 @@ struct ContentView: View {
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.blue)
-                    
+
                     Button("Fix GPS Settings") {
                         locationManager.fixGPSSettings()
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.orange)
-                    
+
                     Button("Clear Logs") {
                         locationManager.clearDuplicateLogs()
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.purple)
-                    
+
                     Button("Clear All Logs") {
                         locationManager.clearDebugLogs()
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.red)
-                    
+
                     Button("Force Stop") {
                         locationManager.forceStopLocationUpdates()
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.red)
                 }
-                
+
                 // Mock Mode (Hidden for now - focus on real GPS testing)
                 #if DEBUG
-                // Uncomment to enable mock mode testing
-                /*
-                VStack(spacing: 12) {
-                    Text("Mock Mode Testing")
-                        .font(.headline)
-                        .foregroundColor(.purple)
-                    
-                    HStack(spacing: 20) {
-                        Button("Simulate 🚗") {
-                            locationManager.simulateAutomotiveActivity()
-                        }
-                        .buttonStyle(.bordered)
-                        .foregroundColor(.green)
-                        
-                        Button("Simulate 🚶") {
-                            locationManager.simulateNonAutomotiveActivity()
-                        }
-                        .buttonStyle(.bordered)
-                        .foregroundColor(.orange)
-                    }
-                }
-                */
+                    // Uncomment to enable mock mode testing
+                    /*
+                     VStack(spacing: 12) {
+                         Text("Mock Mode Testing")
+                             .font(.headline)
+                             .foregroundColor(.purple)
+
+                         HStack(spacing: 20) {
+                             Button("Simulate 🚗") {
+                                 locationManager.simulateAutomotiveActivity()
+                             }
+                             .buttonStyle(.bordered)
+                             .foregroundColor(.green)
+
+                             Button("Simulate 🚶") {
+                                 locationManager.simulateNonAutomotiveActivity()
+                             }
+                             .buttonStyle(.bordered)
+                             .foregroundColor(.orange)
+                         }
+                     }
+                     */
                 #endif
-                
+
                 // Test Case Management Section
                 VStack(spacing: 12) {
                     Text("🧪 Test Case Management")
                         .font(.headline)
                         .foregroundColor(.orange)
-                    
+
                     // Current Test Case Status
                     VStack(spacing: 8) {
                         HStack {
@@ -318,9 +327,11 @@ struct ContentView: View {
                             Text(locationManager.currentTestCase)
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                                .foregroundColor(locationManager.isRecordingTestCase ? .green : .secondary)
+                                .foregroundColor(locationManager
+                                    .isRecordingTestCase ? .green : .secondary
+                                )
                         }
-                        
+
                         if locationManager.isRecordingTestCase {
                             HStack {
                                 Text("Recording:")
@@ -333,7 +344,7 @@ struct ContentView: View {
                                     .foregroundColor(.green)
                             }
                         }
-                        
+
                         if !locationManager.testCaseNotes.isEmpty {
                             HStack {
                                 Text("Notes:")
@@ -351,12 +362,14 @@ struct ContentView: View {
                     .padding(.vertical, 8)
                     .background(Color(.systemOrange).opacity(0.1))
                     .cornerRadius(8)
-                    
+
                     // Test Case Controls
                     VStack(spacing: 8) {
                         // Start/End Test Case
                         HStack(spacing: 12) {
-                            Button(locationManager.isRecordingTestCase ? "End Test Case" : "Start Test Case") {
+                            Button(locationManager
+                                .isRecordingTestCase ? "End Test Case" : "Start Test Case"
+                            ) {
                                 if locationManager.isRecordingTestCase {
                                     locationManager.endTestCase()
                                 } else {
@@ -366,7 +379,7 @@ struct ContentView: View {
                             }
                             .buttonStyle(.borderedProminent)
                             .foregroundColor(locationManager.isRecordingTestCase ? .red : .orange)
-                            
+
                             if locationManager.isRecordingTestCase {
                                 Button("Add Note") {
                                     showAddNoteAlert()
@@ -375,7 +388,7 @@ struct ContentView: View {
                                 .foregroundColor(.blue)
                             }
                         }
-                        
+
                         // Test Case Management
                         HStack(spacing: 12) {
                             Button("Test Summary") {
@@ -383,19 +396,29 @@ struct ContentView: View {
                             }
                             .buttonStyle(.bordered)
                             .foregroundColor(.green)
-                            
+
                             Button("Save All") {
                                 locationManager.saveAllTestCasesToStorage()
                             }
                             .buttonStyle(.bordered)
                             .foregroundColor(.blue)
-                            
+
                             Button("Export All") {
                                 exportAllTestCases()
                             }
                             .buttonStyle(.bordered)
                             .foregroundColor(.purple)
-                            
+                        }
+
+                        // Sample Data Generation
+                        HStack(spacing: 12) {
+                            Button("🧪 Generate Sample Data") {
+                                locationManager.generateSampleTestCase()
+                            }
+                            .buttonStyle(.bordered)
+                            .foregroundColor(.cyan)
+                            .help("Creates a sample test case with mock GPS data for demonstration")
+
                             Button("Clear All") {
                                 showClearTestCasesAlert()
                             }
@@ -403,7 +426,7 @@ struct ContentView: View {
                             .foregroundColor(.red)
                         }
                     }
-                    
+
                     // Saved Test Cases Count
                     if !locationManager.savedTestCases.isEmpty {
                         HStack {
@@ -427,58 +450,145 @@ struct ContentView: View {
                 .padding()
                 .background(Color(.systemOrange).opacity(0.1))
                 .cornerRadius(12)
-                
+
+                // Diagnostic Mode Section
+                VStack(spacing: 12) {
+                    Text("🔍 Diagnostic Mode")
+                        .font(.headline)
+                        .foregroundColor(.purple)
+
+                    // Diagnostic Status
+                    VStack(spacing: 8) {
+                        HStack {
+                            Text("Status:")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(locationManager.diagnosticMode ? "🟢 ACTIVE" : "⚪ INACTIVE")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(locationManager
+                                    .diagnosticMode ? .green : .secondary
+                                )
+                        }
+
+                        if locationManager.diagnosticMode {
+                            HStack {
+                                Text("Issues Detected:")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text("\(locationManager.diagnosticIssues.count)")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(locationManager.diagnosticIssues
+                                        .isEmpty ? .green : .orange
+                                    )
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(Color(.systemPurple).opacity(0.1))
+                    .cornerRadius(8)
+
+                    // Diagnostic Controls
+                    HStack(spacing: 12) {
+                        Button(locationManager
+                            .diagnosticMode ? "Stop Diagnostics" : "Start Diagnostics"
+                        ) {
+                            if locationManager.diagnosticMode {
+                                locationManager.stopDiagnosticMode()
+                            } else {
+                                locationManager.startDiagnosticMode()
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .foregroundColor(locationManager.diagnosticMode ? .red : .purple)
+
+                        if locationManager.diagnosticMode {
+                            Button("View Issues") {
+                                showDiagnosticIssues()
+                            }
+                            .buttonStyle(.bordered)
+                            .foregroundColor(.orange)
+
+                            Button("Export Report") {
+                                exportDiagnosticReport()
+                            }
+                            .buttonStyle(.bordered)
+                            .foregroundColor(.blue)
+                        }
+                    }
+
+                    // Diagnostic Description
+                    Text(
+                        "Diagnostic mode monitors GPS quality, performance, system health, and trip analytics in real-time to identify potential issues during drives."
+                    )
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                }
+                .padding()
+                .background(Color(.systemPurple).opacity(0.1))
+                .cornerRadius(12)
+
                 // Debug Info
                 VStack(spacing: 8) {
                     Text("Status: \(locationManager.authorizationStatus.rawValue)")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     Text("Permission Level: \(permissionLevelText)")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
-                    Text("Background Available: \(locationManager.checkBackgroundLocationAvailability() ? "YES" : "NO")")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
+
+                    Text(
+                        "Background Available: \(locationManager.checkBackgroundLocationAvailability() ? "YES" : "NO")"
+                    )
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
                     Text("Tracking Active: \(locationManager.isTracking ? "YES" : "NO")")
                         .font(.caption)
                         .foregroundColor(locationManager.isTracking ? .green : .red)
-                    
+
                     Text("Speed Detection: \(locationManager.getSpeedDetectionStatus())")
                         .font(.caption)
                         .foregroundColor(.orange)
-                    
+
                     Text("Location Tracking: \(locationManager.getLocationTrackingStatus())")
                         .font(.caption)
                         .foregroundColor(.blue)
-                    
+
                     Text("Trip Active: \(locationManager.isTripActive ? "YES" : "NO")")
                         .font(.caption)
                         .foregroundColor(locationManager.isTripActive ? .green : .red)
-                    
+
                     if locationManager.isTripActive {
-                        Text("Trip Distance: \(String(format: "%.2f", locationManager.currentTripDistance)) miles")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                    
-                    #if DEBUG
-                    Text("Mock Mode: \(locationManager.isMockMode ? "ON" : "OFF")")
+                        Text(
+                            "Trip Distance: \(String(format: "%.2f", locationManager.currentTripDistance)) miles"
+                        )
                         .font(.caption)
-                        .foregroundColor(locationManager.isMockMode ? .purple : .secondary)
+                        .foregroundColor(.green)
+                    }
+
+                    #if DEBUG
+                        Text("Mock Mode: \(locationManager.isMockMode ? "ON" : "OFF")")
+                            .font(.caption)
+                            .foregroundColor(locationManager.isMockMode ? .purple : .secondary)
                     #endif
                 }
                 .padding(.horizontal)
                 .padding(.vertical, 8)
                 .background(Color(.systemGray6))
                 .cornerRadius(8)
-                
+
                 #if DEBUG
-                MockModeView(locationManager: locationManager)
+                    MockModeView(locationManager: locationManager)
                 #endif
-                
+
                 // Debug Logs
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -496,7 +606,7 @@ struct ContentView: View {
                         .buttonStyle(.borderedProminent)
                         .font(.caption)
                     }
-                    
+
                     ScrollView {
                         VStack(alignment: .leading, spacing: 4) {
                             ForEach(locationManager.debugLogs, id: \.self) { log in
@@ -537,7 +647,9 @@ struct ContentView: View {
         .alert("Add Note", isPresented: $showingAddNoteAlert) {
             TextField("Additional Notes", text: $testCaseNotes)
             Button("Add") {
-                locationManager.testCaseNotes += (locationManager.testCaseNotes.isEmpty ? "" : "\n") + testCaseNotes
+                locationManager
+                    .testCaseNotes += (locationManager.testCaseNotes.isEmpty ? "" : "\n") +
+                    testCaseNotes
                 testCaseNotes = ""
             }
             Button("Cancel", role: .cancel) {
@@ -550,7 +662,7 @@ struct ContentView: View {
             Button("Clear All", role: .destructive) {
                 locationManager.clearAllTestCases()
             }
-            Button("Cancel", role: .cancel) { }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will permanently delete all saved test cases. This action cannot be undone.")
         }
@@ -560,39 +672,64 @@ struct ContentView: View {
         .sheet(isPresented: $showingSavedTestCases) {
             SavedTestCasesView(locationManager: locationManager)
         }
+        .sheet(isPresented: $showingDiagnosticIssues) {
+            DiagnosticIssuesView(locationManager: locationManager)
+        }
     }
-    
+
     // MARK: - Test Case Management Methods
-    
+
     private func showStartTestCaseAlert() {
         testCaseName = ""
         testCaseNotes = ""
         showingStartTestCaseAlert = true
     }
-    
+
     private func showAddNoteAlert() {
         testCaseNotes = ""
         showingAddNoteAlert = true
     }
-    
+
     private func showTestCaseSummary() {
         showingTestCaseSummary = true
     }
-    
+
     private func showSavedTestCases() {
         showingSavedTestCases = true
     }
-    
+
     private func showClearTestCasesAlert() {
         showingClearTestCasesAlert = true
     }
-    
+
+    private func showDiagnosticIssues() {
+        showingDiagnosticIssues = true
+    }
+
     private func exportAllTestCases() {
         let report = locationManager.exportAllTestCases()
-        let activityVC = UIActivityViewController(activityItems: [report], applicationActivities: nil)
-        
+        let activityVC = UIActivityViewController(
+            activityItems: [report],
+            applicationActivities: nil
+        )
+
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
+           let window = windowScene.windows.first
+        {
+            window.rootViewController?.present(activityVC, animated: true)
+        }
+    }
+
+    private func exportDiagnosticReport() {
+        let report = locationManager.exportDiagnosticReport()
+        let activityVC = UIActivityViewController(
+            activityItems: [report],
+            applicationActivities: nil
+        )
+
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first
+        {
             window.rootViewController?.present(activityVC, animated: true)
         }
     }
@@ -603,15 +740,15 @@ struct ContentView: View {
 struct TestCaseSummaryView: View {
     @ObservedObject var locationManager: LocationManager
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationView {
             VStack(spacing: 16) {
                 Text(locationManager.getTestCaseSummary())
                     .font(.body)
                     .multilineTextAlignment(.leading)
-        .padding()
-                
+                    .padding()
+
                 Spacer()
             }
             .navigationTitle("Test Case Summary")
@@ -630,7 +767,7 @@ struct TestCaseSummaryView: View {
 struct SavedTestCasesView: View {
     @ObservedObject var locationManager: LocationManager
     @Environment(\.dismiss) private var dismiss
-    
+
     var body: some View {
         NavigationView {
             List {
@@ -644,26 +781,26 @@ struct SavedTestCasesView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
+
                         if !testCase.notes.isEmpty {
                             Text(testCase.notes)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
-                        
+
                         HStack {
                             Text("📍 \(testCase.locations.count) GPS points")
                                 .font(.caption)
                                 .foregroundColor(.blue)
-                            
+
                             if let tripData = testCase.tripData {
                                 Text("🚗 \(String(format: "%.2f", tripData.distance)) miles")
                                     .font(.caption)
                                     .foregroundColor(.green)
                             }
-                            
+
                             Spacer()
-                            
+
                             Button("Export") {
                                 exportTestCase(testCase)
                             }
@@ -682,7 +819,7 @@ struct SavedTestCasesView: View {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Export All") {
                         exportAllTestCases()
@@ -691,32 +828,198 @@ struct SavedTestCasesView: View {
             }
         }
     }
-    
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
-    
+
     private func exportTestCase(_ testCase: LocationManager.TestCase) {
         let report = locationManager.exportTestCase(testCase)
-        let activityVC = UIActivityViewController(activityItems: [report], applicationActivities: nil)
-        
+        let activityVC = UIActivityViewController(
+            activityItems: [report],
+            applicationActivities: nil
+        )
+
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
+           let window = windowScene.windows.first
+        {
             window.rootViewController?.present(activityVC, animated: true)
         }
     }
-    
+
     private func exportAllTestCases() {
         let report = locationManager.exportAllTestCases()
-        let activityVC = UIActivityViewController(activityItems: [report], applicationActivities: nil)
-        
+        let activityVC = UIActivityViewController(
+            activityItems: [report],
+            applicationActivities: nil
+        )
+
         if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
+           let window = windowScene.windows.first
+        {
             window.rootViewController?.present(activityVC, animated: true)
         }
+    }
+}
+
+// MARK: - Diagnostic Issues View
+
+struct DiagnosticIssuesView: View {
+    @ObservedObject var locationManager: LocationManager
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 16) {
+                if locationManager.diagnosticIssues.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 48))
+                            .foregroundColor(.green)
+
+                        Text("No Issues Detected")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+
+                        Text(
+                            "Your drive diagnostics show no problems. Everything is working optimally!"
+                        )
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                } else {
+                    List {
+                        ForEach(locationManager.diagnosticIssues) { issue in
+                            DiagnosticIssueRow(issue: issue)
+                        }
+                    }
+                }
+
+                Spacer()
+            }
+            .navigationTitle("Diagnostic Issues")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct DiagnosticIssueRow: View {
+    let issue: LocationManager.DiagnosticIssue
+
+    private var severityColor: Color {
+        switch issue.severity {
+        case .critical: return .red
+        case .high: return .orange
+        case .medium: return .yellow
+        case .low: return .blue
+        }
+    }
+
+    private var severityIcon: String {
+        switch issue.severity {
+        case .critical: return "🚨"
+        case .high: return "⚠️"
+        case .medium: return "🔍"
+        case .low: return "ℹ️"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(severityIcon)
+                    .font(.title2)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(issue.description)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+
+                    Text(issue.category.rawValue)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Text(issue.severity.rawValue)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(severityColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(severityColor.opacity(0.2))
+                    .cornerRadius(8)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Impact:")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+                Text(issue.impact)
+                    .font(.caption)
+                    .foregroundColor(.primary)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Recommendation:")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.secondary)
+                Text(issue.recommendation)
+                    .font(.caption)
+                    .foregroundColor(.primary)
+            }
+
+            if !issue.data.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Details:")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+
+                    ForEach(Array(issue.data.keys.sorted()), id: \.self) { key in
+                        if let value = issue.data[key] {
+                            HStack {
+                                Text(key)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(value)
+                                    .font(.caption)
+                                    .foregroundColor(.primary)
+                                    .fontWeight(.medium)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text(formatDate(issue.timestamp))
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 }
 
