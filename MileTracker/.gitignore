@@ -1,0 +1,50 @@
+
+# macOS
+.DS_Store
+
+# Xcode user-specific
+*.xcuserstate
+xcuserdata/
+
+# SwiftPM / build
+.build/
+DerivedData/
+
+# VS Code
+.vscode/
+
+
+# macOS
+.DS_Store
+
+# Xcode user-specific
+*.xcuserstate
+xcuserdata/
+
+# SwiftPM / build
+.build/
+DerivedData/
+
+# VS Code
+.vscode/
+
+
+# macOS
+.DS_Store
+
+# Xcode user-specific
+*.xcuserstate
+xcuserdata/
+
+# SwiftPM / build
+.build/
+DerivedData/
+
+# VS Code
+.vscode/
+
+
+# Xcode user-specific
+xcuserdata/
+*.xcuserstate
+
