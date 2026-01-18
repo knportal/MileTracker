@@ -88,9 +88,17 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 
     func startTracking() {
-        // CRITICAL FIX: Handle mock mode separately to avoid Core Location issues
+        // Idempotent: if already tracking, do nothing
+        if isTracking {
+            addLog("ℹ️ Tracking already active")
+            return
+        }
+
+        // Immediately reflect tracking state (user intent)
+        isTracking = true
+
+        // Handle mock mode separately
         if isMockMode {
-            isTracking = true
             tripDetection.startTripDetection()
 
             if diagnosticManager.diagnosticMode {
@@ -101,26 +109,23 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             return
         }
 
-        guard authorizationStatus == .authorizedAlways || authorizationStatus ==
+        // If permission not granted yet, request it but keep tracking enabled
+        if !(authorizationStatus == .authorizedAlways || authorizationStatus ==
             .authorizedWhenInUse
-        else {
+        ) {
             locationError = "Location permission not granted"
-            addLog("❌ Cannot start tracking: permission not granted")
+            addLog("⚠️ Tracking requested, permission not granted — requesting permission")
+            requestLocationPermission()
             return
         }
 
-        // CRITICAL FIX: Completely avoid setting allowsBackgroundLocationUpdates
-        // unless we have Always authorization AND the app is properly configured
+        // Authorized path
         if authorizationStatus == .authorizedAlways {
-            // Only try to enable background updates if we're confident it's safe
-            // For now, let's be conservative and not set it at all
-            addLog("📍 Always authorization detected, but skipping background updates for safety")
+            addLog("📍 Always authorization detected, skipping background updates for safety")
         } else {
-            // For When In Use authorization, never touch background updates
             addLog("📍 Foreground-only location tracking (When In Use)")
         }
 
-        isTracking = true
         manager.startUpdatingLocation()
         tripDetection.startTripDetection()
 

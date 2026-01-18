@@ -5,7 +5,7 @@ import UIKit
 class TestCaseManager: ObservableObject {
     // MARK: - Published Properties
 
-    @Published var currentTestCase: String = "Default Test"
+    @Published var currentTestCase: String = ""
     @Published var testCaseNotes: String = ""
     @Published var savedTestCases: [TestCase] = []
     @Published var isRecordingTestCase = false
