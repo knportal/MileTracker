@@ -36,7 +36,10 @@ struct ContentView: View {
 
                     // Trip History Entry
                     NavigationLink {
-                        TripHistoryListView(viewModel: tripHistoryViewModel)
+                        TripHistoryListView(
+                            viewModel: tripHistoryViewModel,
+                            startTrackingAction: { locationManager.startTracking() }
+                        )
                     } label: {
                         HStack {
                             Image(systemName: "clock.arrow.circlepath")

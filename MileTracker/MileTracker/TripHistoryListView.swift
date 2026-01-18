@@ -2,44 +2,92 @@ import SwiftUI
 
 struct TripHistoryListView: View {
     @ObservedObject var viewModel: TripHistoryViewModel
+    let startTrackingAction: (() -> Void)?
 
     @State private var showingShareSheet = false
     @State private var showingClearAllAlert = false
     @State private var exportText = ""
+    @State private var pendingDeleteTrip: TripRecord?
 
     var body: some View {
         List {
             Section {
+                Picker("Filter", selection: $viewModel.selectedFilter) {
+                    ForEach(TripHistoryFilter.allCases) { filter in
+                        Text(filter.rawValue).tag(filter)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 HStack {
                     Text("Trips")
                     Spacer()
-                    Text("\(viewModel.trips.count)")
+                    Text("\(viewModel.filteredTrips.count)")
                         .foregroundStyle(.secondary)
                 }
 
                 HStack {
                     Text("Total distance")
                     Spacer()
-                    let miles = DistanceConverter.metersToMiles(viewModel.totalDistanceMeters)
+                    let miles = DistanceConverter
+                        .metersToMiles(viewModel.filteredTotalDistanceMeters)
                     Text(DistanceConverter.formatDistanceInMiles(miles))
                         .foregroundStyle(.secondary)
                 }
             }
 
-            Section {
-                if viewModel.trips.isEmpty {
-                    Text("No trips yet")
+            if viewModel.filteredTrips.isEmpty {
+                Section {
+                    VStack(spacing: 12) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 44))
+                            .foregroundStyle(.secondary)
+
+                        Text("No trips found")
+                            .font(.headline)
+
+                        Text(
+                            "Start tracking to record a trip, then come back here to view and export it."
+                        )
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
-                } else {
-                    ForEach(viewModel.trips) { trip in
-                        NavigationLink {
-                            TripDetailView(viewModel: viewModel, trip: trip)
-                        } label: {
-                            TripRow(trip: trip)
+                        .multilineTextAlignment(.center)
+
+                        if let startTrackingAction {
+                            Button("Start Tracking") {
+                                startTrackingAction()
+                            }
+                            .buttonStyle(.borderedProminent)
                         }
                     }
-                    .onDelete { offsets in
-                        Task { await viewModel.delete(atOffsets: offsets) }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                }
+            } else {
+                ForEach(viewModel.groupedSections, id: \.title) { section in
+                    Section(section.title) {
+                        ForEach(section.trips) { trip in
+                            NavigationLink {
+                                TripDetailView(viewModel: viewModel, trip: trip)
+                            } label: {
+                                TripRow(trip: trip)
+                            }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    pendingDeleteTrip = trip
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+
+                                Button {
+                                    exportText = viewModel.exportCSV(trip: trip)
+                                    showingShareSheet = true
+                                } label: {
+                                    Label("Share", systemImage: "square.and.arrow.up")
+                                }
+                                .tint(.blue)
+                            }
+                        }
                     }
                 }
             }
@@ -51,7 +99,7 @@ struct TripHistoryListView: View {
                     exportText = viewModel.exportAllCSV()
                     showingShareSheet = true
                 }
-                .disabled(viewModel.trips.isEmpty)
+                .disabled(viewModel.filteredTrips.isEmpty)
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -62,6 +110,9 @@ struct TripHistoryListView: View {
             }
         }
         .task {
+            await viewModel.load()
+        }
+        .refreshable {
             await viewModel.load()
         }
         .alert("Trip History Error", isPresented: Binding(
@@ -81,6 +132,23 @@ struct TripHistoryListView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will permanently delete all trip history. This action cannot be undone.")
+        }
+        .alert("Delete Trip?", isPresented: Binding(
+            get: { pendingDeleteTrip != nil },
+            set: { newValue in
+                if !newValue { pendingDeleteTrip = nil }
+            }
+        )) {
+            Button("Delete", role: .destructive) {
+                guard let trip = pendingDeleteTrip else { return }
+                Task { await viewModel.deleteTrip(id: trip.id) }
+                pendingDeleteTrip = nil
+            }
+            Button("Cancel", role: .cancel) {
+                pendingDeleteTrip = nil
+            }
+        } message: {
+            Text("This will permanently delete this trip from history.")
         }
         .sheet(isPresented: $showingShareSheet) {
             ShareSheet(activityItems: [exportText])

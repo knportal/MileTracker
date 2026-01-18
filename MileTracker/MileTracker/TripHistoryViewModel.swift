@@ -5,6 +5,7 @@ import Foundation
 final class TripHistoryViewModel: ObservableObject {
     @Published private(set) var trips: [TripRecord] = []
     @Published var errorMessage: String?
+    @Published var selectedFilter: TripHistoryFilter = .all
 
     private let store: any TripHistoryStoring
     private let formatter: TripExportFormatter
@@ -34,14 +35,16 @@ final class TripHistoryViewModel: ObservableObject {
         }
     }
 
-    func delete(atOffsets offsets: IndexSet) async {
+    func deleteTrip(id: UUID) async {
         var updated = trips
-        updated.remove(atOffsets: offsets)
+        updated.removeAll { $0.id == id }
         do {
+            // Persist in ascending order (stable file representation); UI sorts descending after
+            // load.
             try await store.save(updated.sorted { $0.endTime < $1.endTime })
             NotificationCenter.default.post(name: .tripHistoryDidChange, object: nil)
         } catch {
-            errorMessage = "Failed to delete trip(s): \(error.localizedDescription)"
+            errorMessage = "Failed to delete trip: \(error.localizedDescription)"
         }
     }
 
@@ -59,8 +62,30 @@ final class TripHistoryViewModel: ObservableObject {
         trips.reduce(0.0) { $0 + $1.distanceMeters }
     }
 
+    var filteredTotalDistanceMeters: Double {
+        filteredTrips.reduce(0.0) { $0 + $1.distanceMeters }
+    }
+
+    var filteredTrips: [TripRecord] {
+        let now = Date()
+        let calendar = Calendar.current
+        return TripHistoryFiltering.filterTrips(
+            trips,
+            filter: selectedFilter,
+            now: now,
+            calendar: calendar
+        )
+        .sorted { $0.endTime > $1.endTime }
+    }
+
+    var groupedSections: [TripHistoryFiltering.GroupedSection] {
+        let now = Date()
+        let calendar = Calendar.current
+        return TripHistoryFiltering.groupTrips(filteredTrips, now: now, calendar: calendar)
+    }
+
     func exportAllCSV() -> String {
-        formatter.csvAll(trips: trips.sorted { $0.endTime > $1.endTime })
+        formatter.csvAll(trips: filteredTrips)
     }
 
     func exportCSV(trip: TripRecord) -> String {

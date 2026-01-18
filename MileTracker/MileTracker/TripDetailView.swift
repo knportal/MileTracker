@@ -41,6 +41,17 @@ struct TripDetailView: View {
         }
         .navigationTitle("Trip")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    exportText = viewModel.exportCSV(trip: trip)
+                    showingShareSheet = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("Share Trip")
+            }
+        }
         .sheet(isPresented: $showingShareSheet) {
             ShareSheet(activityItems: [exportText])
         }
