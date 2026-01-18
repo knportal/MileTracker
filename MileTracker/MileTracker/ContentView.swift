@@ -8,7 +8,14 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject var locationManager = LocationManager()
+    @StateObject private var locationManager: LocationManager
+    @StateObject private var tripHistoryViewModel: TripHistoryViewModel
+
+    init() {
+        let store = FileTripHistoryStore()
+        _locationManager = StateObject(wrappedValue: LocationManager(tripHistoryStore: store))
+        _tripHistoryViewModel = StateObject(wrappedValue: TripHistoryViewModel(store: store))
+    }
 
     // Test Case Management State
     @State private var showingStartTestCaseAlert = false
@@ -21,26 +28,47 @@ struct ContentView: View {
     @State private var testCaseNotes = ""
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Status View
-                StatusView(locationManager: locationManager)
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Status View
+                    StatusView(locationManager: locationManager)
 
-                // Control Buttons
-                ControlButtonsView(locationManager: locationManager)
+                    // Trip History Entry
+                    NavigationLink {
+                        TripHistoryListView(viewModel: tripHistoryViewModel)
+                    } label: {
+                        HStack {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .foregroundColor(.blue)
+                            Text("Trip History")
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.secondary)
+                        }
+                        .padding()
+                        .background(Color(.systemGray6))
+                        .cornerRadius(12)
+                    }
 
-                // Mock Mode View (Debug only)
-                #if DEBUG
-                    MockModeView(locationManager: locationManager)
-                #endif
+                    // Control Buttons
+                    ControlButtonsView(locationManager: locationManager)
 
-                // Test Case Management
-                TestCaseManagementView(locationManager: locationManager)
+                    // Mock Mode View (Debug only)
+                    #if DEBUG
+                        MockModeView(locationManager: locationManager)
+                    #endif
 
-                // Debug Logs
-                DebugLogsView(locationManager: locationManager)
+                    // Test Case Management
+                    TestCaseManagementView(locationManager: locationManager)
+
+                    // Debug Logs
+                    DebugLogsView(locationManager: locationManager)
+                }
+                .padding()
             }
-            .padding()
         }
         .alert("Start Test Case", isPresented: $showingStartTestCaseAlert) {
             TextField("Test Case Name", text: $testCaseName)
@@ -297,16 +325,6 @@ struct DebugLogsExportView: View {
             ShareSheet(activityItems: [exportText])
         }
     }
-}
-
-struct ShareSheet: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Test Case Summary View
