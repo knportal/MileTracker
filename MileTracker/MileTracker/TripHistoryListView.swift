@@ -106,7 +106,7 @@ struct TripHistoryListView: View {
                 Button("Clear All") {
                     showingClearAllAlert = true
                 }
-                .disabled(viewModel.trips.isEmpty)
+                .disabled(viewModel.filteredTrips.isEmpty)
             }
         }
         .task {
