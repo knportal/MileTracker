@@ -27,6 +27,10 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let tripDetection = TripDetection()
     private let testCaseManager = TestCaseManager()
 
+    // Trip History
+    private let tripHistoryStore: (any TripHistoryStoring)?
+    private var tripHistoryRecorder: TripHistoryRecorder?
+
     // MEMORY LEAK FIX: Add array size limits
     private let maxLocationHistory = 1000 // Keep last 1000 locations to prevent unbounded growth
 
@@ -42,14 +46,26 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     // MARK: - Initialization
 
     override init() {
+        self.tripHistoryStore = nil
         super.init()
-        setupLocationManager()
-        setupMotionManager()
-        setupDependencies()
-        UIDevice.current.isBatteryMonitoringEnabled = true
+        commonInit()
+    }
+
+    init(tripHistoryStore: any TripHistoryStoring) {
+        self.tripHistoryStore = tripHistoryStore
+        super.init()
+        commonInit()
     }
 
     // MARK: - Setup Methods
+
+    private func commonInit() {
+        setupLocationManager()
+        setupMotionManager()
+        setupDependencies()
+        setupTripHistoryRecorderIfNeeded()
+        UIDevice.current.isBatteryMonitoringEnabled = true
+    }
 
     private func setupLocationManager() {
         manager.delegate = self
@@ -75,6 +91,18 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         diagnosticManager.updateAuthorizationStatus(authorizationStatus)
 
         addLog("📍 Dependencies configured for test case management")
+    }
+
+    private func setupTripHistoryRecorderIfNeeded() {
+        guard let tripHistoryStore else { return }
+        tripHistoryRecorder = TripHistoryRecorder(
+            tripDetection: tripDetection,
+            store: tripHistoryStore,
+            isMockProvider: { [weak self] in self?.isMockMode ?? false },
+            onError: { [weak self] error in
+                self?.addLog("❌ Trip history save failed: \(error.localizedDescription)")
+            }
+        )
     }
 
     // MARK: - Public Methods
